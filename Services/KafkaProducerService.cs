@@ -2,132 +2,118 @@
 using MVCandKAFKA3.Models;
 using System.Text.Json;
 
-namespace MVCandKAFKA3.Services
+namespace MVCandKAFKA3.Services;
+
+public class KafkaProducerService
 {
-    public class KafkaProducerService
+    private readonly IProducer<Null, string> _producer;
+    private readonly string _topic;
+    private readonly ILogger<KafkaProducerService> _logger;
+
+    public KafkaProducerService(string bootstrapServers, string topic, ILogger<KafkaProducerService> logger)
     {
-        private readonly IProducer<Null, string> _producer;
-        private readonly string _topic;
-        private readonly ILogger<KafkaProducerService> _logger;
+        _topic = topic;
+        _logger = logger;
 
-        public KafkaProducerService(string bootstrapServers, string topic, ILogger<KafkaProducerService> logger)
+        var config = new ProducerConfig
         {
-            _topic = topic;
-            _logger = logger;
+            BootstrapServers = bootstrapServers,
+            Acks = Acks.All,
+            EnableIdempotence = true,
+            MaxInFlight = 5,
+            MessageTimeoutMs = 10000,
+            RequestTimeoutMs = 5000
+        };
 
-            var config = new ProducerConfig
-            {
-                BootstrapServers = bootstrapServers,
-                Acks = Acks.All,
-                EnableIdempotence = true,
-                MaxInFlight = 5,
-                MessageTimeoutMs = 10000,
-                RequestTimeoutMs = 5000
-            };
+        _producer = new ProducerBuilder<Null, string>(config).Build();
+    }
 
-            _producer = new ProducerBuilder<Null, string>(config).Build();
-        }
-
-        public async Task<bool> SendMessageAsync(Product product)
+    public async Task<bool> SendMessageAsync(Product product)
+    {
+        try
         {
-            try
+            var json = JsonSerializer.Serialize(product, new JsonSerializerOptions
             {
-                var json = JsonSerializer.Serialize(product, new JsonSerializerOptions
+                WriteIndented = true
+            });
+
+            var result = await _producer.ProduceAsync(
+                _topic,
+                new Message<Null, string>
                 {
-                    WriteIndented = true
-                });
+                    Value = json,
+                    Timestamp = new Timestamp(DateTime.UtcNow)
+                }
+            );
 
-                var result = await _producer.ProduceAsync(
-                    _topic,
-                    new Message<Null, string>
-                    {
-                        Value = json,
-                        Timestamp = new Timestamp(DateTime.UtcNow)
-                    }
-                );
+            _logger.LogInformation("Yuborildi", result.Topic, result.Partition.Value, result.Offset.Value);
 
-                _logger.LogInformation(
-                    "Muvaffaqiyatli yuborildi",
-                    result.Topic,
-                    result.Partition.Value,
-                    result.Offset.Value
-                );
-
-                return true;
-            }
-            catch (ProduceException<Null, string> ex)
-            {
-                _logger.LogError(ex, "Xatolik", ex.Error.Reason);
-                return false;
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Xatolik");
-                return false;
-            }
+            return true;
         }
-
-       public async Task<bool> SendAsync<T>(T message)
+        catch (ProduceException<Null, string> ex)
         {
-            try
-            {
-                var json = JsonSerializer.Serialize(message, new JsonSerializerOptions
-                {
-                    WriteIndented = true
-                });
-
-                var result = await _producer.ProduceAsync(
-                    _topic,
-                    new Message<Null, string> { Value = json }
-                );
-
-                _logger.LogInformation(
-                    "Yuborildi",
-                    result.Topic,
-                    result.Offset.Value
-                );
-
-                return true;
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Xatolik");
-                return false;
-            }
+            _logger.LogError(ex, "Xatolik", ex.Error.Reason);
+            return false;
         }
-
-        public async Task<bool> SendAsync<T>(string topic, T message)
+        catch (Exception ex)
         {
-            try
-            {
-                var json = JsonSerializer.Serialize(message, new JsonSerializerOptions
-                {
-                    WriteIndented = true
-                });
-
-                var result = await _producer.ProduceAsync(
-                    topic,
-                    new Message<Null, string> { Value = json }
-                );
-
-                _logger.LogInformation(
-                    "Custom topic'ga yuborildi - Topic: {Topic}, Offset: {Offset}",
-                    result.Topic,
-                    result.Offset.Value
-                );
-
-                return true;
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Custom topic'ga yuborishda xatolik");
-                return false;
-            }
+            _logger.LogError(ex, "Xatolik");
+            return false;
         }
-        public void Dispose()
+    }
+
+    public async Task<bool> SendAsync<T>(T message)
+    {
+        try
         {
-            _producer?.Flush(TimeSpan.FromSeconds(10));
-            _producer?.Dispose();
+            var json = JsonSerializer.Serialize(message, new JsonSerializerOptions
+            {
+                WriteIndented = true
+            });
+
+            var result = await _producer.ProduceAsync(
+                _topic,
+                new Message<Null, string> { Value = json }
+            );
+
+            _logger.LogInformation("Xatolik", result.Topic, result.Offset.Value);
+
+            return true;
         }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Xatolik");
+            return false;
+        }
+    }
+
+    public async Task<bool> SendAsync<T>(string topic, T message)
+    {
+        try
+        {
+            var json = JsonSerializer.Serialize(message, new JsonSerializerOptions
+            {
+                WriteIndented = true
+            });
+
+            var result = await _producer.ProduceAsync(
+                topic,
+                new Message<Null, string> { Value = json }
+            );
+
+            _logger.LogInformation("Yuborildi", result.Topic, result.Offset.Value);
+
+            return true;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Xatolik");
+            return false;
+        }
+    }
+    public void Dispose()
+    {
+        _producer?.Flush(TimeSpan.FromSeconds(10));
+        _producer?.Dispose();
     }
 }
