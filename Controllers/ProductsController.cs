@@ -39,14 +39,14 @@ public class ProductsController : Controller
 
         var products = from p in _context.Products select p;
 
-        if (!string.IsNullOrEmpty(searchString))
-        {
-            products = products.Where(p =>
-                p.Name.Contains(searchString) ||
-                p.Category.Contains(searchString) ||
-                p.Description.Contains(searchString) ||
-                p.Manufacturer.Contains(searchString));
-        }
+        //if (!string.IsNullOrEmpty(searchString))
+        //{
+        //    products = products.Where(p =>
+        //        p.Name.Contains(searchString) ||
+        //        p.Category.Contains(searchString) ||
+        //        p.Description.Contains(searchString) ||
+        //        p.Manufacturer.Contains(searchString));
+        //}
 
         products = sortOrder switch
         {
@@ -62,10 +62,7 @@ public class ProductsController : Controller
 
         int pageSize = 10;
         var count = await products.CountAsync();
-        var items = await products
-            .Skip(((pageNumber ?? 1) - 1) * pageSize)
-            .Take(pageSize)
-            .ToListAsync();
+        var items = await products.Skip(((pageNumber ?? 1) - 1) * pageSize).Take(pageSize).ToListAsync();
 
         var paginatedList = new PaginatedList<Product>(items, count, pageNumber ?? 1, pageSize);
 
@@ -146,7 +143,7 @@ public class ProductsController : Controller
         }
         return RedirectToAction(nameof(Index));
     }
-     
+
     public async Task<IActionResult> ExportToExcel()
     {
         var products = await _context.Products.ToListAsync();
