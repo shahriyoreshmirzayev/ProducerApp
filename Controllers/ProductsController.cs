@@ -39,14 +39,14 @@ public class ProductsController : Controller
 
         var products = from p in _context.Products select p;
 
-        //if (!string.IsNullOrEmpty(searchString))
-        //{
-        //    products = products.Where(p =>
-        //        p.Name.Contains(searchString) ||
-        //        p.Category.Contains(searchString) ||
-        //        p.Description.Contains(searchString) ||
-        //        p.Manufacturer.Contains(searchString));
-        //}
+        if (!string.IsNullOrEmpty(searchString))
+        {
+            products = products.Where(p =>
+                p.Name.Contains(searchString) ||
+                p.Category.Contains(searchString) ||
+                p.Description.Contains(searchString) ||
+                p.Manufacturer.Contains(searchString));
+        }
 
         products = sortOrder switch
         {
