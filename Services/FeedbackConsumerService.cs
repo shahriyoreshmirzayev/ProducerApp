@@ -3,16 +3,6 @@ using System.Text.Json;
 
 namespace MVCandKAFKA3;
 
-public class ApprovalFeedback
-{
-    public int ProductId { get; set; }
-    public string Status { get; set; }
-    public string? RejectionReason { get; set; }
-    public DateTime ReviewedDate { get; set; }
-    public string? ReviewedBy { get; set; }
-    public string? Comments { get; set; }
-}
-
 public class FeedbackConsumerService : BackgroundService
 {
     private readonly IServiceProvider _serviceProvider;
@@ -120,4 +110,14 @@ public class FeedbackConsumerService : BackgroundService
             _logger.LogError(ex, "Xatolik");
         }
     }
+}
+
+public class ApprovalFeedback
+{
+    public int ProductId { get; set; }
+    public string Status { get; set; }
+    public string? RejectionReason { get; set; }
+    public DateTime ReviewedDate { get; set; }
+    public string? ReviewedBy { get; set; }
+    public string? Comments { get; set; }
 }
